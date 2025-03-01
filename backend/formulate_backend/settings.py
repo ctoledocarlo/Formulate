@@ -12,7 +12,12 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import boto3
+from supabase import create_client
 import os
+import dj_database_url
+
+from dotenv import load_dotenv
+load_dotenv()
 
 # DynamoDB connection
 dynamodb = boto3.resource(
@@ -21,6 +26,8 @@ dynamodb = boto3.resource(
     aws_access_key_id= os.environ.get('AWS_ACCESS_KEY_ID'),
     aws_secret_access_key= os.environ.get('AWS_SECRET_ACCESS_KEY'),
 )
+
+AUTH_USER_MODEL = 'surveys.User'
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -48,6 +55,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    'corsheaders',
     "surveys",   
 ]
 
@@ -59,7 +67,10 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    'corsheaders.middleware.CorsMiddleware',
 ]
+
+CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = "formulate_backend.urls"
 
@@ -85,11 +96,9 @@ WSGI_APPLICATION = "formulate_backend.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+    'default': dj_database_url.config(default=os.getenv("DATABASE_URL")),
 }
 
 
