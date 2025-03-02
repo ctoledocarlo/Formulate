@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 const SignIn: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -14,20 +15,24 @@ const SignIn: React.FC = () => {
     setFormData({ ...formData, [name]: value });
   };
 
+  const router = useRouter();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const { email, password } = formData;
-    const response = await fetch('http://127.0.0.1:8000/api/surveys/signin/', {
+    const response = await fetch('http://localhost:8000/api/surveys/signin/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: "include",
       body: JSON.stringify({ username: email, password }),
     });
 
     if (response.ok) {
       const data = await response.json();
       console.log('Sign in successful:', data);
+      router.push('/dashboard');
     } else {
       const errorData = await response.json();
       console.error('Error signing in:', errorData);
@@ -103,7 +108,7 @@ const SignIn: React.FC = () => {
 
       {/* Footer */}
       <footer className="bg-[#272757] p-4 text-center">
-        <p className="text-sm">© 2023 Formulate. All rights reserved.</p>
+        <p className="text-sm">© 2025 Formulate. All rights reserved.</p>
       </footer>
     </div>
   );

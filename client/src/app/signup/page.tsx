@@ -19,7 +19,7 @@ const SignUp: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const { firstName, lastName, username, password } = formData;
-    const response = await fetch('http://127.0.0.1:8000/api/surveys/signup/', {
+    const response = await fetch('http://localhost:8000/api/surveys/signup/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
