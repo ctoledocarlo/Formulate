@@ -4,7 +4,9 @@ from rest_framework.decorators import api_view
 from rest_framework import status
 from .serializers import SignUpSerializer, SignInSerializer
 from django.contrib.auth import authenticate, login, logout
-
+from django.conf import settings
+import uuid
+import time
 import re
 
 def camel_to_snake(name):
@@ -72,6 +74,25 @@ def logout(request):
     except Exception as e:
         print(f"Error during logout: {e}")
         return Response({"error": "An error occurred during logout"}, status=500)
+
+@api_view(['POST'])
+def create_form(request):
+    table = settings.DYNAMODB.Table('FormulateForms')
+    data = request.data
+
+    response = table.put_item(
+		Item={
+            "form_id": f"{uuid.uuid4()}-{int(time.time())}",
+			"form_name": data['formName'],
+            "form_description": data['formDescription'],
+            'id': data['id'],
+			"fields": data['fields'],
+            "responses": {}
+		}
+	)
+    return Response({"message": "Form created successfully", "response": response}, status=200)
+
+
 
 @api_view(["GET"])
 def health_check(request):

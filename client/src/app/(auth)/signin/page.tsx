@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 const SignIn: React.FC = () => {
+  const [loginMessage, setLoginMessage] = useState('');
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -32,9 +34,11 @@ const SignIn: React.FC = () => {
     if (response.ok) {
       const data = await response.json();
       console.log('Sign in successful:', data);
+      setLoginMessage('Sign in successful');
       router.push('/dashboard');
     } else {
       const errorData = await response.json();
+      setLoginMessage('Invalid credentials');
       console.error('Error signing in:', errorData);
     }
   };
@@ -96,6 +100,7 @@ const SignIn: React.FC = () => {
                 required
               />
             </div>
+            <p className="text-lg text-[#fa8072] mb-3">{loginMessage}</p>
             <button
               type="submit"
               className="w-full bg-[#6EACDA] text-[#0F0E47] px-4 py-2 rounded-lg shadow-lg hover:bg-[#505081] transition duration-300"
