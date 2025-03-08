@@ -8,14 +8,24 @@ import * as Templates from "./templates";
 const CreateForm: React.FC = () => {
 	const [isClient, setIsClient] = useState(false);
 	const [selectedType, setSelectedType] = useState("");
-	const [questions, setQuestions] = useState<{ id: number; type: string; value: string | string[] }[]>([]);	
-	const [optionQuestions, setOptionQuestions] = useState<{ id: number; type: string; value: string | string[], options: string[] }[]>([]);	
-	// try this later
+	const [userId, setUserId] = useState(null)
+	const [questions, setQuestions] = useState<{ 
+		id: number; 
+		type: string; 
+		value: string;
+		options?: string[] 
+	}[]>([]);		
 
 	const [formData, setFormData] = useState({
 		formTitle: "",
 		formDescription: "",
 	});
+
+	const getCsrfToken = async () => {
+        const response = await fetch('http://localhost:8000/api/surveys/csrf/', {credentials: 'include',});
+        const data = await response.json();
+        return data.csrfToken;
+    };
 
 	const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
 		const { name, value } = e.target;
@@ -33,29 +43,40 @@ const CreateForm: React.FC = () => {
 	const addQuestion = (type: "shortAnswer" | "longAnswer" | "multipleChoice" | "checkboxes" | "dropdown" | "date") => {
 		setQuestions((prevQuestions) => [
 			...prevQuestions,
-			{ id: Date.now(), type, value: type === "multipleChoice" || type === "checkboxes" || type === "dropdown" ? [""] : "" }
+			{ 	id: Date.now(), 
+				type, 
+				value: "",
+				options: type === "multipleChoice" || type === "checkboxes" || type === "dropdown" ? [""] : undefined
+			}
 		]);
 	};
 
-	const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-		setSelectedType(e.target.value);
-	  };
-	  
 	const handleAddQuestion = () => {
 		if (selectedType) {
 			addQuestion(selectedType as "shortAnswer" | "longAnswer" | "multipleChoice" | "checkboxes" | "dropdown" | "date");
 		}
+
+		console.log(questions)
 	};
 
-	const handleQuestionChange = (id: number, value: string | string[]) => {
+	const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+		setSelectedType(e.target.value);
+	};
+
+	const handleQuestionChange = (id: number, value: string) => {
 		setQuestions((prevQuestions) =>
-			prevQuestions.map((q) => (q.id === id ? { ...q, value } : q))
+			prevQuestions.map((q) => {
+				if (q.id === id) {
+					return { ...q, value };
+				}
+				return q;
+			})
 		);
 	};
 
-	const updateOptionValue = (q: { id: number; type: string; value: string | string[] }, index: number, value: string) => {
-		if (Array.isArray(q.value)) {
-			return { ...q, value: q.value.map((opt, i) => (i === index ? value : opt)) };
+	const updateOptionValue = (q: { id: number; type: string; value: string; options?: string[] }, index: number, value: string) => {
+		if (Array.isArray(q.options)) {
+			return { ...q, options: q.options.map((opt, i) => (i === index ? value : opt)) };
 		}
 		return q; 
 	};
@@ -71,7 +92,9 @@ const CreateForm: React.FC = () => {
 	const addOption = (id: number) => {
 		setQuestions((prevQuestions) =>
 			prevQuestions.map((q) =>
-				q.id === id ? { ...q, value: [...q.value, ""] } : q
+				q.id === id 
+					? { ...q, options: q.options ? [...q.options, ""] : [""] }
+					: q
 			)
 		);
 	};
@@ -79,6 +102,55 @@ const CreateForm: React.FC = () => {
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 		console.log("Form Submitted");
+	};
+
+	const getUserId = async () => {
+		const response = await fetch('http://localhost:8000/api/surveys/health_check/', {
+			method: 'GET',
+			credentials: 'include', 	
+		});
+
+		if (response.ok) {
+			const data = await response.json();
+			console.log(data.user_id)
+			setUserId(data.user_id);
+		  } else {
+			const errorData = await response.json();
+			console.error('Error getting user ID:', errorData);
+		  }
+	};
+
+	const handleFormulate = async (e: React.FormEvent) => {
+		e.preventDefault();
+
+		await getUserId()
+
+		const formMetadata = {
+			form_name: formData.formTitle,
+			form_description: formData.formDescription,
+			id: userId,
+			questions
+		}
+
+		console.log(formMetadata);
+
+		const csrfToken = await getCsrfToken();
+		const response = await fetch('http://localhost:8000/api/surveys/create_form/', {
+			method: 'POST',
+			headers: {
+			  'Content-Type': 'application/json',
+			  'X-CSRFToken': csrfToken
+			},
+			body: JSON.stringify( formMetadata ),
+		  });
+		
+		  if (response.ok) {
+			const data = await response.json();
+			console.log('Form created successfully:', data);
+		  } else {
+			const errorData = await response.json();
+			console.error('Error creating form:', errorData);
+		  }
 	};
 
 	return (
@@ -151,8 +223,9 @@ const CreateForm: React.FC = () => {
 											key={q.id}
 											name={`question_${q.id}`}
 											value={q.value}
-											options={q.value}
-											onChange={(index: number, val: string) => handleOptionChange(q.id, index, val)}
+											options={q.options}
+											onOptionChange={(index: number, val: string) => handleOptionChange(q.id, index, val)}
+											onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleQuestionChange(q.id, e.target.value)}
 											addOption={() => addOption(q.id)}
 										/>
 									);
@@ -162,8 +235,9 @@ const CreateForm: React.FC = () => {
 											key={q.id}
 											name={`question_${q.id}`}
 											value={q.value}
-											options={q.value}
-											onChange={(index: number, val: string) => handleOptionChange(q.id, index, val)}
+											options={q.options}
+											onOptionChange={(index: number, val: string) => handleOptionChange(q.id, index, val)}
+											onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleQuestionChange(q.id, e.target.value)}
 											addOption={() => addOption(q.id)}
 										/>
 									);
@@ -173,8 +247,9 @@ const CreateForm: React.FC = () => {
 											key={q.id}
 											name={`question_${q.id}`}
 											value={q.value}
-											options={q.value}
-											onChange={(index: number, val: string) => handleOptionChange(q.id, index, val)}
+											options={q.options}
+											onOptionChange={(index: number, val: string) => handleOptionChange(q.id, index, val)}
+											onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleQuestionChange(q.id, e.target.value)}
 											addOption={() => addOption(q.id)}
 										/>
 									);
@@ -217,7 +292,7 @@ const CreateForm: React.FC = () => {
 							</button>
 							</div>
 
-						<button onClick={() => handleSubmit}
+						<button onClick={handleFormulate}
 							className="bg-[#6EACDA] text-[#0F0E47] px-4 mb-10 py-3 rounded-lg shadow-md hover:bg-[#505081] transition duration-300 mt-2">
 							Formulate
 						</button>

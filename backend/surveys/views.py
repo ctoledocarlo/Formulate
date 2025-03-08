@@ -77,22 +77,24 @@ def logout(request):
 
 @api_view(['POST'])
 def create_form(request):
+    print(f"User: {request.user}, Authenticated: {request.user.is_authenticated}")
+    if not request.user.is_authenticated:
+        return Response({"error": "User is not authenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+    
     table = settings.DYNAMODB.Table('FormulateForms')
     data = request.data
 
     response = table.put_item(
 		Item={
             "form_id": f"{uuid.uuid4()}-{int(time.time())}",
-			"form_name": data['formName'],
-            "form_description": data['formDescription'],
-            'id': data['id'],
-			"fields": data['fields'],
+			"form_name": data['form_name'],
+            "form_description": data['form_description'],
+			"questions": data['questions'],
+            'id': request.user.id,
             "responses": {}
 		}
 	)
     return Response({"message": "Form created successfully", "response": response}, status=200)
-
-
 
 @api_view(["GET"])
 def health_check(request):

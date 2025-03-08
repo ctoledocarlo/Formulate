@@ -38,8 +38,7 @@ export const LongAnswerQuestion = ({ name, value, onChange }) => (
   </div>
 );
 
-// Multiple Choice Question Component
-export const MultipleChoiceQuestion = ({ name, value, onChange, options, addOption }) => (
+export const MultipleChoiceQuestion = ({ name, value, onChange, onOptionChange, options, addOption }) => (
   <div className="text-center p-6 rounded-lg shadow-lg bg-[#272757] w-full">
     <input
       type="text"
@@ -50,12 +49,12 @@ export const MultipleChoiceQuestion = ({ name, value, onChange, options, addOpti
       className="w-full px-4 mb-4 py-3 border rounded-lg bg-[#0F0E47] text-white focus:ring-2 focus:ring-[#6EACDA]"
     />
 
-    {options.map((option, index) => (
+    {options && options.map((option, index) => (
       <input
         key={index}
         type="text"
         value={option}
-        onChange={(e) => onChange(index, e.target.value)}
+        onChange={(e) => onOptionChange(index, e.target.value)}
         placeholder={`Option ${index + 1}`}
         className="w-full px-4 py-1 border rounded-lg bg-[#0F0E47] text-white focus:ring-2 focus:ring-[#6EACDA] mb-2"
       />
@@ -71,7 +70,7 @@ export const MultipleChoiceQuestion = ({ name, value, onChange, options, addOpti
 );
 
 // Checkbox Question Component
-export const CheckboxQuestion = ({ name, value, onChange, options, addOption }) => (
+export const CheckboxQuestion = ({ name, value, onChange, onOptionChange, options, addOption }) => (
   <div className="text-center p-6 rounded-lg shadow-lg bg-[#272757] w-full">
     <input
       type="text"
@@ -82,12 +81,12 @@ export const CheckboxQuestion = ({ name, value, onChange, options, addOption }) 
       className="w-full px-4 mb-4 py-3 border rounded-lg bg-[#0F0E47] text-white focus:ring-2 focus:ring-[#6EACDA]"
     />
 
-    {options.map((option, index) => (
+    {options && options.map((option, index) => (
       <input
         key={index}
         type="text"
         value={option}
-        onChange={(e) => onChange(index, e.target.value)}
+        onChange={(e) => onOptionChange(index, e.target.value)}
         placeholder={`Checkbox ${index + 1}`}
         className="w-full px-4 py-1 border rounded-lg bg-[#0F0E47] text-white focus:ring-2 focus:ring-[#6EACDA] mb-2"
       />
@@ -103,31 +102,32 @@ export const CheckboxQuestion = ({ name, value, onChange, options, addOption }) 
 );
 
 // Dropdown Question Component
-export const DropdownQuestion = ({ name, value, onChange, options, addOption }) => (
-    <div className="text-center p-6 rounded-lg shadow-lg bg-[#272757] w-full">
+export const DropdownQuestion = ({ name, value, onChange, onOptionChange, options, addOption }) => (
+  <div className="text-center p-6 rounded-lg shadow-lg bg-[#272757] w-full">
+    <input
+      type="text"
+      name={name}
+      value={value}
+      onChange={onChange}
+      placeholder="Dropdown Question"
+      className="w-full px-4 mb-4 py-3 border rounded-lg bg-[#0F0E47] text-white focus:ring-2 focus:ring-[#6EACDA]"
+    />
+    {options && options.map((option, index) => (
       <input
+        key={index}
         type="text"
-        name={name}
-        value={value}
-        onChange={onChange}
-        placeholder="Dropdown Question"
-        className="w-full px-4 mb-4 py-3 border rounded-lg bg-[#0F0E47] text-white focus:ring-2 focus:ring-[#6EACDA]"
+        value={option}
+        onChange={(e) => onOptionChange(index, e.target.value)}
+        placeholder={`Dropdown Option ${index + 1}`}
+        className="w-full px-4 py-1 border rounded-lg bg-[#0F0E47] text-white focus:ring-2 focus:ring-[#6EACDA] mb-2"
       />
-      {options.map((option, index) => (
-        <input
-          key={index}
-          type="text"
-          value={option}
-          onChange={(e) => onChange(index, e.target.value)}
-          placeholder={`Dropdown Option ${index + 1}`}
-          className="w-full px-4 py-1 border rounded-lg bg-[#0F0E47] text-white focus:ring-2 focus:ring-[#6EACDA] mb-2"
-        />
-      ))}
-      <button onClick={addOption} className="bg-[#6EACDA] text-[#0F0E47] px-4 py-1 rounded-lg shadow-md hover:bg-[#505081] transition duration-300 mt-2">
-        + Add Dropdown Option
-      </button>
-    </div>
-  );
+    ))}
+    <button onClick={addOption} className="bg-[#6EACDA] text-[#0F0E47] px-4 py-1 rounded-lg shadow-md hover:bg-[#505081] transition duration-300 mt-2">
+      + Add Dropdown Option
+    </button>
+  </div>
+);
+
 
 // Date Question Component
 export const DateQuestion = ({ name, value, onChange }) => (
