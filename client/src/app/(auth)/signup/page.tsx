@@ -1,9 +1,14 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation'; 
 import Link from 'next/link';
 
+import { supabase } from '../../supabase/supabaseClient'
+
 const SignUp: React.FC = () => {
+  const router = useRouter();
+
   const [formData, setFormData] = useState({
     username: '',
     firstName: '',
@@ -19,21 +24,31 @@ const SignUp: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const { firstName, lastName, username, password } = formData;
-    const response = await fetch('http://localhost:8000/api/surveys/signup/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ firstName, lastName, username, password }),
-      });
+    const { data, error } = await supabase.auth.signUp({ email: username, password });
     
-      if (response.ok) {
-        const data = await response.json();
-        console.log('User created successfully:', data);
-      } else {
-        const errorData = await response.json();
-        console.error('Error creating user:', errorData);
-      }
+    if (error) {
+      console.log(error)
+      return { error }; 
+    }
+
+    const user = data.user
+    const { error: insertError } = await supabase
+    .from('users')
+    .insert([
+      {
+        id: user?.id, 
+        email: user?.email,
+        first_name: firstName, 
+        last_name: lastName
+      },
+    ]);
+    
+    if (insertError) {
+      return { error: insertError };
+    }
+
+    router.push('/signin')
+    return { user };
   };
 
   return (

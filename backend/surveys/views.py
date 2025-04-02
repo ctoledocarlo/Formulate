@@ -9,8 +9,22 @@ import uuid
 import time
 import re
 
+# import psycopg2
+# from dotenv import load_dotenv
+# import os
+
+# load_dotenv()
+
+# # Fetch variables
+# USER = os.getenv("user")
+# PASSWORD = os.getenv("password")
+# HOST = os.getenv("host")
+# PORT = os.getenv("port")
+# DBNAME = os.getenv("dbname")
+
 def camel_to_snake(name):
     return re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', name).lower()
+
 def convert_camel_to_snake_case(data):
     if isinstance(data, dict):
         return {camel_to_snake(key): convert_camel_to_snake_case(value) for key, value in data.items()}
@@ -18,15 +32,6 @@ def convert_camel_to_snake_case(data):
         return [convert_camel_to_snake_case(item) for item in data]
     else:
         return data
-
-@api_view(['POST'])
-def sign_up(request):
-    converted_data = convert_camel_to_snake_case(request.data)
-    serializer = SignUpSerializer(data=converted_data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response({'message': 'User created successfully'}, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 def sign_in(request):

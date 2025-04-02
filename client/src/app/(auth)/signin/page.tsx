@@ -4,8 +4,11 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { supabase } from '../../supabase/supabaseClient'
+
 const SignIn: React.FC = () => {
   const [loginMessage, setLoginMessage] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -21,26 +24,26 @@ const SignIn: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true)
     const { email, password } = formData;
-    const response = await fetch('http://localhost:8000/api/surveys/signin/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: "include",
-      body: JSON.stringify({ username: email, password }),
-    });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    console.log("Sign-in response:", data, error);
 
-    if (response.ok) {
-      const data = await response.json();
-      console.log('Sign in successful:', data);
-      setLoginMessage('Sign in successful');
+    const session = await supabase.auth.getSession();
+    console.log("Current session:", session);
+
+    const user = data.user
+
+    if (error) {
+      console.error('Sign in error:', error.message);
+      return { error: error.message };}
+
+    if (user) {
       router.push('/dashboard');
-    } else {
-      const errorData = await response.json();
-      setLoginMessage('Invalid credentials');
-      console.error('Error signing in:', errorData);
     }
+    
+    setLoading(false)
+    return { user };
   };
 
   return (
@@ -103,9 +106,10 @@ const SignIn: React.FC = () => {
             <p className="text-lg text-[#fa8072] mb-3">{loginMessage}</p>
             <button
               type="submit"
+              disabled={loading}
               className="w-full bg-[#6EACDA] text-[#0F0E47] px-4 py-2 rounded-lg shadow-lg hover:bg-[#505081] transition duration-300"
             >
-              Sign In
+              {loading ? 'Signing in...': 'Sign In'}
             </button>
           </form>
         </div>

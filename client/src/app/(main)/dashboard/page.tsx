@@ -1,49 +1,49 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useAuth } from '../../hooks/useAuth';
 import { useRouter } from 'next/navigation';
+import { supabase } from '../../supabase/supabaseClient'
+import { User } from '@supabase/supabase-js';
 
 const Dashboard: React.FC = () => {
     const router = useRouter();
-    const { loading, isAuthenticated } = useAuth();
+    const [user, setUser] = useState<User | null>(null);
 
-    if (loading) {
-        return <div>Loading...</div>;  // Show a loading message or spinner
-    }
+    useEffect(() => {
+        const fetchSession = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            setUser(session?.user ?? null);
+        };
 
-    if (!isAuthenticated) {
-        return null;  // Prevent rendering if redirecting (optional)
-    }
+        fetchSession();
 
-    const getCsrfToken = async () => {
-        const response = await fetch('http://localhost:8000/api/surveys/csrf/', {credentials: 'include',});
-        const data = await response.json();
-        return data.csrfToken;
-    };
-
-    const handleLogout = async () => {
-        try {
-            const csrfToken = await getCsrfToken(); // Fetch CSRF token
-            const logoutResponse = await fetch('http://localhost:8000/api/surveys/logout/', {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken, // Include CSRF token in headers
-            },
+        const { data: authListener } = supabase.auth.onAuthStateChange((_, session) => {
+            setUser(session?.user ?? null);
         });
 
-        if (logoutResponse.ok) {
-            console.log('Logged out successfully');
+        return () => {
+            authListener.subscription.unsubscribe();
+        };
+    }, []);
+
+    useEffect(() => {
+        if (user === null) return;
+        if (!user) {
             router.push('/signin');
-        } else {
-            console.error('Logout failed:', logoutResponse.statusText);
         }
-        } catch (error) {
-            console.error('Error during logout:', error);
+    }, [user, router]); 
+
+    const handleLogout = async () => {
+        const { error } = await supabase.auth.signOut();
+
+        if (error) {
+            console.error('Sign out error:', error.message);
+            return { error: error.message };
         }
+
+        router.push('/signin');
+        return { success: true };
     };
 
     return (
