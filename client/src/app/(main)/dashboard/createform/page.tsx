@@ -2,13 +2,21 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useAuth } from "../../../hooks/useAuth";
 import * as Templates from "./templates";
 
+import { useRouter } from 'next/navigation';
+import { supabase } from '../../../supabase/supabaseClient'
+import { User } from '@supabase/supabase-js';
+import Navbar from '../../../navbar';
+
 const CreateForm: React.FC = () => {
+	const router = useRouter();
+    const [user, setUser] = useState<User | null>(null);
+	const [accessToken, setAccessToken] = useState<string>("")
+    const [loading, setLoading] = useState(true);
+
 	const [isClient, setIsClient] = useState(false);
 	const [selectedType, setSelectedType] = useState("");
-	const [userId, setUserId] = useState(null)
 	const [questions, setQuestions] = useState<{ 
 		id: number; 
 		type: string; 
@@ -21,24 +29,44 @@ const CreateForm: React.FC = () => {
 		formDescription: "",
 	});
 
-	const getCsrfToken = async () => {
-        const response = await fetch('http://localhost:8000/api/surveys/csrf/', {credentials: 'include',});
-        const data = await response.json();
-        return data.csrfToken;
-    };
+    useEffect(() => {
+        const fetchSession = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            setUser(session?.user ?? null);
+			setAccessToken(session?.access_token ?? "")
+            setLoading(false);
+        };
+    
+        fetchSession();
+    
+        const { data: authListener } = supabase.auth.onAuthStateChange((_, session) => {
+            setUser(session?.user ?? null);
+            setLoading(false);
+        });
+    
+        return () => {
+            authListener.subscription.unsubscribe();
+        };
+    }, []);
+    
+    useEffect(() => {
+        if (!loading && !user) {
+            router.push('/signin');
+        }
+    
+    }, [user, loading, router]);
+
+	useEffect(() => {
+		setIsClient(true);
+	}, []);
 
 	const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
 		const { name, value } = e.target;
 		setFormData({ ...formData, [name]: value });
 	};
 
-	useEffect(() => {
-		setIsClient(true);
-	}, []);
 
-	useAuth(); // Ensure it runs after hydration
-
-	if (!isClient) return null; // Avoid mismatches by not rendering on the server
+	if (!isClient) return null; 
 
 	const addQuestion = (type: "shortAnswer" | "longAnswer" | "multipleChoice" | "checkboxes" | "dropdown" | "date") => {
 		setQuestions((prevQuestions) => [
@@ -104,74 +132,40 @@ const CreateForm: React.FC = () => {
 		console.log("Form Submitted");
 	};
 
-	const getUserId = async () => {
-		const response = await fetch('http://localhost:8000/api/surveys/health_check/', {
-			method: 'GET',
-			credentials: 'include', 	
-		});
-
-		if (response.ok) {
-			const data = await response.json();
-			console.log(data.user_id)
-			setUserId(data.user_id);
-		  } else {
-			const errorData = await response.json();
-			console.error('Error getting user ID:', errorData);
-		  }
-	};
-
 	const handleFormulate = async (e: React.FormEvent) => {
 		e.preventDefault();
-
-		await getUserId()
 
 		const formMetadata = {
 			form_name: formData.formTitle,
 			form_description: formData.formDescription,
-			id: userId,
+			id: user?.id,
 			questions
 		}
 
 		console.log(formMetadata);
-
-		const csrfToken = await getCsrfToken();
+		
 		const response = await fetch('http://localhost:8000/api/surveys/create_form/', {
 			method: 'POST',
 			headers: {
 			  'Content-Type': 'application/json',
-			  'X-CSRFToken': csrfToken
+			  'Authorization': `Bearer ${accessToken}`
 			},
 			body: JSON.stringify( formMetadata ),
-		  });
-		
-		  if (response.ok) {
+		});
+	
+		if (response.ok) {
 			const data = await response.json();
 			console.log('Form created successfully:', data);
-		  } else {
+		} else {
 			const errorData = await response.json();
 			console.error('Error creating form:', errorData);
-		  }
+		}
 	};
 
 	return (
 		<div className="min-h-screen bg-[#0F0E47] text-white flex flex-col">
-			{/* Navbar */}
-			<nav className="bg-[#272757] p-4 shadow-md">
-				<div className="container mx-auto flex justify-between items-center">
-					<div className="text-2xl font-bold">Formulate</div>
-					<div className="space-x-4">
-						<Link href="#" className="hover:text-[#6EACDA] transition duration-300">
-							Home
-						</Link>
-						<Link href="#" className="hover:text-[#6EACDA] transition duration-300">
-							Forms
-						</Link>
-						<Link href="#" className="hover:text-[#6EACDA] transition duration-300">
-							Settings
-						</Link>
-					</div>
-				</div>
-			</nav>
+
+			<Navbar/>
 
 			{/* Main Content */}
 			<main className="flex-grow flex items-start justify-center">

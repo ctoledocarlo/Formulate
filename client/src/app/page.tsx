@@ -1,28 +1,10 @@
 import Link from 'next/link';
+import Navbar from './navbar';
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-[#0F0E47] text-white flex flex-col">
-      {/* Navbar */}
-      <nav className="bg-[#272757] p-4 shadow-md">
-        <div className="container mx-auto flex justify-between items-center">
-          <div className="text-2xl font-bold">Formulate</div>
-          <div className="space-x-4">
-            <Link href="#" className="hover:text-[#6EACDA] transition duration-300">
-              Home
-            </Link>
-            <Link href="#" className="hover:text-[#6EACDA] transition duration-300">
-              Features
-            </Link>
-            <Link href="#" className="hover:text-[#6EACDA] transition duration-300">
-              Pricing
-            </Link>
-            <Link href="#" className="hover:text-[#6EACDA] transition duration-300">
-              Contact
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Navbar/>
 
       {/* Main Content */}
       <main className="flex-grow flex items-center justify-center">

@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import Navbar from '../../navbar';
 
 import { supabase } from '../../supabase/supabaseClient'
 
@@ -36,6 +36,8 @@ const SignIn: React.FC = () => {
 
     if (error) {
       console.error('Sign in error:', error.message);
+      setLoading(false)
+      setLoginMessage("Invalid Credentials")
       return { error: error.message };}
 
     if (user) {
@@ -48,26 +50,7 @@ const SignIn: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#0F0E47] text-white flex flex-col">
-      {/* Navbar */}
-      <nav className="bg-[#272757] p-4 shadow-md">
-        <div className="container mx-auto flex justify-between items-center">
-          <div className="text-2xl font-bold">Formulate</div>
-          <div className="space-x-4">
-            <Link href="#" className="hover:text-[#6EACDA] transition duration-300">
-              Home
-            </Link>
-            <Link href="#" className="hover:text-[#6EACDA] transition duration-300">
-              Features
-            </Link>
-            <Link href="#" className="hover:text-[#6EACDA] transition duration-300">
-              Pricing
-            </Link>
-            <Link href="#" className="hover:text-[#6EACDA] transition duration-300">
-              Contact
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Navbar/>
 
       {/* Main Content */}
       <main className="flex-grow flex items-center justify-center">
@@ -103,7 +86,6 @@ const SignIn: React.FC = () => {
                 required
               />
             </div>
-            <p className="text-lg text-[#fa8072] mb-3">{loginMessage}</p>
             <button
               type="submit"
               disabled={loading}
@@ -111,6 +93,7 @@ const SignIn: React.FC = () => {
             >
               {loading ? 'Signing in...': 'Sign In'}
             </button>
+            <p className="text-sm text-[#fa8072] mb-3">{loginMessage}</p>
           </form>
         </div>
       </main>

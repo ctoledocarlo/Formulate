@@ -2,105 +2,84 @@ from django.shortcuts import render
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework import status
-from .serializers import SignUpSerializer, SignInSerializer
-from django.contrib.auth import authenticate, login, logout
+from rest_framework.exceptions import AuthenticationFailed
 from django.conf import settings
 import uuid
 import time
-import re
+import botocore.exceptions
+import jwt
+    
+def check_authorization(request):
+    auth_header = request.headers.get('Authorization')
+    if not auth_header:
+        raise AuthenticationFailed('Authorization header is missing or malformed.')
 
-# import psycopg2
-# from dotenv import load_dotenv
-# import os
+    # Check if the header contains "Bearer"
+    if not auth_header.startswith('Bearer '):
+        raise AuthenticationFailed('Authorization header has no Bearer prefix.')
+    
+    token = auth_header.split(' ')[1]
+    secret = settings.SUPABASE_JWT_SECRET
 
-# load_dotenv()
+    # token = "eyJhbGciOiJIUzI1NiIsImtpZCI6InhyNytOc0RMeHBUWEp2UGIiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3ZtZHh0eHh1cnJ3am9zdmpwZWVkLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiI3ZjJmNTA2OS02Njc5LTRiZDktYWE2Zi1lZTRlMDdlMjg2ZTQiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzQzODc3MzAxLCJpYXQiOjE3NDM4NzM3MDEsImVtYWlsIjoiY3RvbGVkb2NhcmxvQGdtYWlsLmNvbSIsInBob25lIjoiIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZW1haWwiLCJwcm92aWRlcnMiOlsiZW1haWwiXX0sInVzZXJfbWV0YWRhdGEiOnsiZW1haWwiOiJjdG9sZWRvY2FybG9AZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBob25lX3ZlcmlmaWVkIjpmYWxzZSwic3ViIjoiN2YyZjUwNjktNjY3OS00YmQ5LWFhNmYtZWU0ZTA3ZTI4NmU0In0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoicGFzc3dvcmQiLCJ0aW1lc3RhbXAiOjE3NDM4NzM3MDB9XSwic2Vzc2lvbl9pZCI6IjJlNTc1Y2ExLWIxNzAtNDk5ZS04NTExLWVjNGUwNThlZmZiZCIsImlzX2Fub255bW91cyI6ZmFsc2V9.Tei1bDrWrZuLeBIr9QDtQD8GgjJtV29xlyUOus0tbCM"
+    # secret = "rHR2m5hzL63edv5AWqMPZQh+9mNB9YKrg/F4xNt0HMEN5uHLgAPLo4VDHC/k9IMxL1rVgvw4mpTlJZmblvsfwg=="
 
-# # Fetch variables
-# USER = os.getenv("user")
-# PASSWORD = os.getenv("password")
-# HOST = os.getenv("host")
-# PORT = os.getenv("port")
-# DBNAME = os.getenv("dbname")
+    payload = jwt.decode(token, secret, algorithms=["HS256"], audience="authenticated")
+    return payload
 
-def camel_to_snake(name):
-    return re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', name).lower()
-
-def convert_camel_to_snake_case(data):
-    if isinstance(data, dict):
-        return {camel_to_snake(key): convert_camel_to_snake_case(value) for key, value in data.items()}
-    elif isinstance(data, list):
-        return [convert_camel_to_snake_case(item) for item in data]
-    else:
-        return data
-
-@api_view(['POST'])
-def sign_in(request):
-    serializer = SignInSerializer(data=request.data)
-    if serializer.is_valid():
-        username = serializer.validated_data['username']
-        password = serializer.validated_data['password']
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            login(request, user)  # Log the user in and create a session
-            
-            # Ensure session key exists
-            if not request.session.session_key:
-                request.session.create()
-
-            response = Response({'message': 'Sign in successful'}, status=status.HTTP_200_OK)
-
-            response.set_cookie(
-                key="sessionid",
-                value=request.session.session_key,
-                httponly=True,  # Prevents JavaScript access (XSS protection)
-                secure=False,  # Set to True in production (HTTPS required)
-                samesite="Lax",  # Helps with CSRF protection
-            )
-            return response
-        else:
-            return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-@api_view(["GET"])
-def get_csrf_token(request):
-    print(request.COOKIES.get('csrftoken'))
-    return Response({"csrfToken": request.COOKIES.get('csrftoken')}, status=200)
-
-@api_view(['POST'])
-def logout(request):
-    try:
-        django_request = request._request
-        logout(django_request)  # Log the user out using the original request
-
-        response = Response({"message": "Logged out successfully"}, status=status.HTTP_200_OK)
-        response.delete_cookie("sessionid")  # Delete the session cookie
-        response.delete_cookie("csrftoken")  # Delete the CSRF token cookie
-        return response
-    except Exception as e:
-        print(f"Error during logout: {e}")
-        return Response({"error": "An error occurred during logout"}, status=500)
 
 @api_view(['POST'])
 def create_form(request):
-    print(f"User: {request.user}, Authenticated: {request.user.is_authenticated}")
-    if not request.user.is_authenticated:
-        return Response({"error": "User is not authenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+    payload = check_authorization(request)
+
+    # if not payload:
+    #     return Response({"message": "User not authorized", "response": response}, status=200)
+
+    if not payload['sub']:
+        return Response({"error": "User is not authenticated"}, 
+                        status=status.HTTP_401_UNAUTHORIZED)
     
     table = settings.DYNAMODB.Table('FormulateForms')
     data = request.data
 
-    response = table.put_item(
-		Item={
-            "form_id": f"{uuid.uuid4()}-{int(time.time())}",
-			"form_name": data['form_name'],
-            "form_description": data['form_description'],
-			"questions": data['questions'],
-            'id': request.user.id,
-            "responses": {}
-		}
-	)
-    return Response({"message": "Form created successfully", "response": response}, status=200)
+    try: 
+        response = table.put_item(
+            Item={
+                "form_id": f"{uuid.uuid4()}-{int(time.time())}",
+                "form_name": data['form_name'],
+                "form_description": data['form_description'],
+                "questions": data['questions'],
+                'id': payload['sub'],
+                "responses": {}
+            }
+        )
+        return Response({"message": "Form created successfully", "response": response}, status=200)
+    except Exception as e:
+        return Response({"message": "What table?", "error": str(e)}, status=400)
 
 @api_view(["GET"])
 def health_check(request):
-    return Response({"message": "API is up and running"}, status=200)
+    try:
+        table = settings.DYNAMODB.Table('FormulateForms')
+        
+        # Perform a lightweight scan (limit to 1 item to reduce read costs)
+        response = table.scan(Limit=2)
+        items = response.get("Items", [])
+
+        return Response({
+            "message": "API is up and running",
+            "dynamoDB": "Connected",
+            "sample": items
+        }, status=200)
+
+    except botocore.exceptions.ClientError as e:
+        return Response({
+            "message": "API is up but DynamoDB check failed",
+            "error": str(e)
+        }, status=500)
+
+    except Exception as e:
+        return Response({
+            "message": "Unexpected error during health check",
+            "error": str(e)
+        }, status=500)

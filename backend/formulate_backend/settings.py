@@ -60,11 +60,35 @@ DATABASES = {
 
 LOGIN_URL = '/signin/'
 
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': True,
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'WARNING',  
+            'propagate':False,
+        },
+        'views': { 
+            'handlers': ['console'],
+            'level': 'DEBUG',  
+            'propagate': False,
+        },
+    },
+}
+
 # BASE SETTINGS ----------------------------------------------------------------------------------
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-d_r99=)8+7i=7%1()p77p3(!hh0mwq0dyq)sv=p+b^pa3&ynl*')
+SUPABASE_JWT_SECRET = os.environ.get('SUPABASE_JWT_SECRET')
 
 DEBUG = False
 
