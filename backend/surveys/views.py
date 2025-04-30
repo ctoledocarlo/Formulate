@@ -8,6 +8,7 @@ import uuid
 import time
 import botocore.exceptions
 import jwt
+from boto3.dynamodb.conditions import Attr
     
 def check_authorization(request):
     auth_header = request.headers.get('Authorization')
@@ -20,10 +21,6 @@ def check_authorization(request):
     
     token = auth_header.split(' ')[1]
     secret = settings.SUPABASE_JWT_SECRET
-
-    # token = "eyJhbGciOiJIUzI1NiIsImtpZCI6InhyNytOc0RMeHBUWEp2UGIiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3ZtZHh0eHh1cnJ3am9zdmpwZWVkLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiI3ZjJmNTA2OS02Njc5LTRiZDktYWE2Zi1lZTRlMDdlMjg2ZTQiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzQzODc3MzAxLCJpYXQiOjE3NDM4NzM3MDEsImVtYWlsIjoiY3RvbGVkb2NhcmxvQGdtYWlsLmNvbSIsInBob25lIjoiIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZW1haWwiLCJwcm92aWRlcnMiOlsiZW1haWwiXX0sInVzZXJfbWV0YWRhdGEiOnsiZW1haWwiOiJjdG9sZWRvY2FybG9AZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBob25lX3ZlcmlmaWVkIjpmYWxzZSwic3ViIjoiN2YyZjUwNjktNjY3OS00YmQ5LWFhNmYtZWU0ZTA3ZTI4NmU0In0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoicGFzc3dvcmQiLCJ0aW1lc3RhbXAiOjE3NDM4NzM3MDB9XSwic2Vzc2lvbl9pZCI6IjJlNTc1Y2ExLWIxNzAtNDk5ZS04NTExLWVjNGUwNThlZmZiZCIsImlzX2Fub255bW91cyI6ZmFsc2V9.Tei1bDrWrZuLeBIr9QDtQD8GgjJtV29xlyUOus0tbCM"
-    # secret = "rHR2m5hzL63edv5AWqMPZQh+9mNB9YKrg/F4xNt0HMEN5uHLgAPLo4VDHC/k9IMxL1rVgvw4mpTlJZmblvsfwg=="
-
     payload = jwt.decode(token, secret, algorithms=["HS256"], audience="authenticated")
     return payload
 
@@ -32,8 +29,8 @@ def check_authorization(request):
 def create_form(request):
     payload = check_authorization(request)
 
-    # if not payload:
-    #     return Response({"message": "User not authorized", "response": response}, status=200)
+    if not payload:
+        return Response({"message": "User not authorized", "response": response}, status=200)
 
     if not payload['sub']:
         return Response({"error": "User is not authenticated"}, 
@@ -49,13 +46,47 @@ def create_form(request):
                 "form_name": data['form_name'],
                 "form_description": data['form_description'],
                 "questions": data['questions'],
-                'id': payload['sub'],
+                'authorId': payload['sub'],
                 "responses": {}
             }
         )
         return Response({"message": "Form created successfully", "response": response}, status=200)
     except Exception as e:
         return Response({"message": "What table?", "error": str(e)}, status=400)
+
+
+@api_view(['POST'])
+def retrieve_user_forms(request):
+    print("Request data:", request.data)  # Debug print
+    authorId = request.data.get('authorId')
+    print("AuthorId:", authorId)  # Debug print
+    
+    try:
+        table = settings.DYNAMODB.Table('FormulateForms')
+        
+        response = table.scan(
+            FilterExpression=Attr('authorId').eq(authorId)
+        )
+        
+        items = response.get("Items", [])
+        print("Items found:", items)  # Debug print
+
+        return Response({
+            "forms": items
+        }, status=200)
+
+    except botocore.exceptions.ClientError as e:
+        return Response({
+            "message": "API is up but DynamoDB check failed",
+            "error": str(e)
+        }, status=500)
+
+    except Exception as e:
+        return Response({
+            "message": "Unexpected error during form retrieval",
+            "error": str(e)
+        }, status=500)
+
 
 @api_view(["GET"])
 def health_check(request):

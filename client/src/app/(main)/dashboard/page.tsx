@@ -23,7 +23,6 @@ const Dashboard: React.FC = () => {
 
     const [myForms, setMyForms] = useState<Form[] | null>(null)
 
-
     useEffect(() => {
         const fetchSession = async () => {
             const { data: { session } } = await supabase.auth.getSession();
