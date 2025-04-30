@@ -57,10 +57,17 @@ def create_form(request):
 
 @api_view(['POST'])
 def retrieve_user_forms(request):
-    print("Request data:", request.data)  # Debug print
-    authorId = request.data.get('authorId')
-    print("AuthorId:", authorId)  # Debug print
+    payload = check_authorization(request)
+
+    if not payload:
+        return Response({"message": "User not authorized", "response": response}, status=200)
     
+    if not payload['sub']:
+        return Response({"error": "User is not authenticated"}, 
+                        status=status.HTTP_401_UNAUTHORIZED)
+    
+    authorId = request.data.get('authorId')
+
     try:
         table = settings.DYNAMODB.Table('FormulateForms')
         
@@ -69,7 +76,6 @@ def retrieve_user_forms(request):
         )
         
         items = response.get("Items", [])
-        print("Items found:", items)  # Debug print
 
         return Response({
             "forms": items
