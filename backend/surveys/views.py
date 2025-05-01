@@ -37,20 +37,25 @@ def create_form(request):
                         status=status.HTTP_401_UNAUTHORIZED)
     
     table = settings.DYNAMODB.Table('FormulateForms')
-    data = request.data
 
     try: 
-        response = table.put_item(
-            Item={
-                "form_id": f"{uuid.uuid4()}-{int(time.time())}",
-                "form_name": data['form_name'],
-                "form_description": data['form_description'],
-                "questions": data['questions'],
-                'authorId': payload['sub'],
-                "responses": {}
-            }
-        )
-        return Response({"message": "Form created successfully", "response": response}, status=200)
+        form_id = f"{uuid.uuid4()}-{int(time.time())}"
+        new_form = {
+            "form_id": form_id,
+            "form_name": "",
+            "form_description": "",
+            "questions": [],
+            "authorId": payload["sub"],
+            "responses": {}
+        }
+
+        response = table.put_item(Item=new_form)
+
+        return Response({
+            "message": "Form created successfully",
+            "response": response,
+            "form": new_form
+        }, status=200)
     except Exception as e:
         return Response({"message": "What table?", "error": str(e)}, status=400)
 
@@ -149,27 +154,31 @@ def edit_form(request):
     print(request.data)
     data = request.data
     form_id = data.get("form_id")
+    
+    print(f"id: {form_id}")
 
     form_id = request.query_params.get("form_id")
     table = settings.DYNAMODB.Table('FormulateForms')
 
     try:
-        response = table.get_item(Key={'form_id': form_id})
+        response = table.get_item(Key={'form_id': form_id, 'authorId': authorId})
         form = response.get('Item')
 
         if not form or form.get("authorId") != authorId:
             return Response({"error": "Form not found or unauthorized"}, status=404)
 
-        updated_form = {
-            'form_id': form_id,
-            'form_name': data.get('form_name'),
-            'form_description': data.get('form_description'),
-            'questions': data.get('questions'),
-            'authorId': authorId,  
-            'responses': form.get('responses', {}) 
-        }
+        response = table.update_item(
+            Key={'form_id': form_id, 'authorId': authorId},
+            UpdateExpression="SET form_name = :name, form_description = :desc, questions = :qs",
+            ExpressionAttributeValues={
+                ':name': data.get('form_name', ''),
+                ':desc': data.get('form_description', ''),
+                ':qs': data.get('questions', [])
+            },
+            ReturnValues="ALL_NEW"  # This returns the updated item
+        )
 
-        table.put_item(Item=updated_form)
+        updated_form = response.get("Attributes", {})
         return Response({"message": "Form updated successfully", "form": updated_form}, status=200)
 
     except Exception as e:

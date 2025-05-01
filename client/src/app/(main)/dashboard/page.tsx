@@ -89,8 +89,8 @@ const Dashboard: React.FC = () => {
                                 myForms.map((form) => (
                                     <div key={form.form_id} className="bg-[#0F0E47] h-30 flex items-center justify-center rounded-lg shadow-lg p-4">
                                         <div className="text-center">
-                                            <h2 className="font-bold text-lg">{form.form_name}</h2>
-                                            <p className="text-sm">{form.form_description}</p>
+                                            <h2 className="font-bold text-lg">{form.form_name || "Untitled Form"}</h2>
+                                            <p className="text-sm">{form.form_description || "No description"}</p>
                                             <Link href={`dashboard/forms/${form.form_id}`} className="text-blue-400 underline mt-2 block">View Form</Link>
                                         </div>
                                     </div>

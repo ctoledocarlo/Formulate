@@ -4,20 +4,17 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from './supabase/supabaseClient'
 import React, { useState, useEffect } from 'react';
-import { User } from '@supabase/supabase-js';
 
 
 export default function Navbar() {
     const router = useRouter();
-
-    const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
-
+    const [accessToken, setAccessToken] = useState<string>("")
 
     useEffect(() => {
         const fetchSession = async () => {
             const { data: { session } } = await supabase.auth.getSession();
-            setUser(session?.user ?? null);
+            setAccessToken(session?.access_token ?? "")
             console.log(session)
             setLoading(false);
         };
@@ -25,7 +22,7 @@ export default function Navbar() {
         fetchSession();
     
         const { data: authListener } = supabase.auth.onAuthStateChange((_, session) => {
-            setUser(session?.user ?? null);
+            setAccessToken(session?.access_token ?? "")
             setLoading(false);
         });
     
@@ -46,18 +43,35 @@ export default function Navbar() {
         return { success: true };
     };
 
-    const handleClick = (e: React.MouseEvent) => {
+    const handleClick = async (e: React.MouseEvent) => {
         e.preventDefault();
-        // Do something (e.g., logging, analytics, auth check)
         console.log("Create Form clicked");
-        router.push("/dashboard/createform");
+
+        const response = await fetch('http://localhost:8000/api/surveys/create_form/', {
+			method: 'POST',
+			headers: {
+			  'Content-Type': 'application/json',
+			  'Authorization': `Bearer ${accessToken}`
+			},
+		});
+
+        console.log(response);
+	
+		if (response.ok) {
+			const data = await response.json();
+			console.log('Form created successfully:', data);
+            router.push(`dashboard/forms/${data.form.form_id}`);
+		} else {
+			const errorData = await response.json();
+			console.error('Error creating form:', errorData);
+		}
     };
 
     return (
         <nav className="bg-[#272757] p-4 shadow-md">
             <div className="container mx-auto flex justify-between items-center">
                 
-                {user ? 
+                {accessToken ? 
                     (
                         <div className="flex items-center justify-between w-full">
                             <Link href="/dashboard" className="text-2xl font-bold hover:text-[#6EACDA]">
