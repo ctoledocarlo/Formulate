@@ -66,7 +66,7 @@ def retrieve_user_forms(request):
         return Response({"error": "User is not authenticated"}, 
                         status=status.HTTP_401_UNAUTHORIZED)
     
-    authorId = request.data.get('authorId')
+    authorId = payload['sub']
 
     try:
         table = settings.DYNAMODB.Table('FormulateForms')
@@ -92,6 +92,88 @@ def retrieve_user_forms(request):
             "message": "Unexpected error during form retrieval",
             "error": str(e)
         }, status=500)
+
+
+@api_view(['GET'])
+def retrieve_form(request):
+    payload = check_authorization(request)
+
+    if not payload:
+        return Response({"message": "User not authorized"}, status=status.HTTP_401_UNAUTHORIZED)
+    
+    if not payload.get('sub'):
+        return Response({"error": "User is not authenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    form_id = request.query_params.get("form_id")
+    if not form_id:
+        return Response({"error": "Missing form_id in query parameters"}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        table = settings.DYNAMODB.Table('FormulateForms')
+        
+        response = table.scan(
+            FilterExpression=Attr('form_id').eq(form_id)
+        )
+        
+        items = response.get("Items", [])
+
+        return Response({
+            "form": items
+        }, status=200)
+
+    except botocore.exceptions.ClientError as e:
+        return Response({
+            "message": "API is up but DynamoDB check failed",
+            "error": str(e)
+        }, status=500)
+
+    except Exception as e:
+        return Response({
+            "message": "Unexpected error during form retrieval",
+            "error": str(e)
+        }, status=500)
+
+
+@api_view(['PUT'])
+def edit_form(request):
+    payload = check_authorization(request)
+
+    if not payload:
+        return Response({"message": "User not authorized"}, status=status.HTTP_401_UNAUTHORIZED)
+    
+    authorId = payload.get('sub')
+    
+    if not authorId:
+        return Response({"error": "User is not authenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+    
+    print(request.data)
+    data = request.data
+    form_id = data.get("form_id")
+
+    form_id = request.query_params.get("form_id")
+    table = settings.DYNAMODB.Table('FormulateForms')
+
+    try:
+        response = table.get_item(Key={'form_id': form_id})
+        form = response.get('Item')
+
+        if not form or form.get("authorId") != authorId:
+            return Response({"error": "Form not found or unauthorized"}, status=404)
+
+        updated_form = {
+            'form_id': form_id,
+            'form_name': data.get('form_name'),
+            'form_description': data.get('form_description'),
+            'questions': data.get('questions'),
+            'authorId': authorId,  
+            'responses': form.get('responses', {}) 
+        }
+
+        table.put_item(Item=updated_form)
+        return Response({"message": "Form updated successfully", "form": updated_form}, status=200)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
 
 
 @api_view(["GET"])

@@ -46,6 +46,13 @@ export default function Navbar() {
         return { success: true };
     };
 
+    const handleClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        // Do something (e.g., logging, analytics, auth check)
+        console.log("Create Form clicked");
+        router.push("/dashboard/createform");
+    };
+
     return (
         <nav className="bg-[#272757] p-4 shadow-md">
             <div className="container mx-auto flex justify-between items-center">
@@ -58,11 +65,11 @@ export default function Navbar() {
                             </Link>
 
                             <div className="space-x-4"> 
-                                <Link className="hover:text-[#6EACDA] transition duration-300" 
-                                    href="/dashboard/createform">
+                                <button 
+                                    onClick={handleClick} className="hover:text-[#6EACDA] transition duration-300 cursor-pointer">
                                     Create Form
-                                </Link>
-
+                                </button>
+                                
                                 <button onClick={handleLogout} className="hover:text-[#6EACDA] transition duration-300">
                                     Logout
                                 </button>

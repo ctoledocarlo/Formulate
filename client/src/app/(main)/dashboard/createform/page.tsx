@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import * as Templates from "./templates";
+import * as Templates from "../templates";
 
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../supabase/supabaseClient'
@@ -64,7 +64,6 @@ const CreateForm: React.FC = () => {
 		const { name, value } = e.target;
 		setFormData({ ...formData, [name]: value });
 	};
-
 
 	if (!isClient) return null; 
 
